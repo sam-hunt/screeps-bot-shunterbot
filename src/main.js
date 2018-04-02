@@ -4,6 +4,15 @@ var roleBuilder = require('role.builder');
 
 module.exports.loop = function () {
 
+    // Clean up dead creeps so we don't burn up cpu or memory trying to use them.
+    for(var name in Memory.creeps) {
+        if(!Game.creeps[name]) {
+            delete Memory.creeps[name];
+            console.log('Clearing non-existing creep memory:', name);
+        }
+    }
+
+    // Do a bunch of counts to use in later decision-making.
     // Count how many of each role of creep we have.
     // TODO: Make this more elegant and dynamic.
     var roles = ['harvester','builder','upgrader'], roleCounts = {};
@@ -24,6 +33,8 @@ module.exports.loop = function () {
         console.log(role + ': ' + roleCounts[role]);
     });
 
+    // TODO: Count how much energy we have across room extensions.
+
     // Hack to spawn new creeps of our 3 roles if we have below a minimum threshold.
     // TODO: Move this to its own module.
     if (Game.spawns) {
@@ -37,19 +48,20 @@ module.exports.loop = function () {
             var requiredSpawnEnergy = 200;
 
             // TODO: Make these dynamic per role.
-            if(spawn.energy >= requiredSpawnEnergy && !spawn.spawning && !spawnCommandSent && roleCounts['harvester'] < 2 ) {
+            // TODO: Add an energy check here which uses the spawn energy plus pooled energy available from extensions.
+            if( !spawn.spawning && !spawnCommandSent && roleCounts['harvester'] < 2 ) {
                 var newName = 'Harvester' + Game.time;
                 console.log('Spawning new harvester: ' + newName);
                 spawn.spawnCreep([WORK,CARRY,MOVE], newName, {memory: {role: 'harvester'}});
                 spawnCommandSent = 1;
             }
-            if(spawn.energy >= requiredSpawnEnergy && !spawn.spawning && !spawnCommandSent && roleCounts['upgrader'] < 5 ) {
+            if( !spawn.spawning && !spawnCommandSent && roleCounts['upgrader'] < 6 ) {
                 var newName = 'Upgrader' + Game.time;
                 console.log('Spawning new upgrader: ' + newName);
                 spawn.spawnCreep([WORK,CARRY,MOVE], newName, {memory: {role: 'upgrader'}});
                 spawnCommandSent = 1;
             }
-            if(spawn.energy >= requiredSpawnEnergy && !spawn.spawning && !spawnCommandSent && roleCounts['builder'] < 2 ) {
+            if( !spawn.spawning && !spawnCommandSent && roleCounts['builder'] < 2 ) {
                 var newName = 'Builder' + Game.time;
                 console.log('Spawning new builder: ' + newName);
                 spawn.spawnCreep([WORK,CARRY,MOVE], newName, {memory: {role: 'builder'}});
@@ -64,20 +76,21 @@ module.exports.loop = function () {
         });
     }
 
-    // var tower = Game.getObjectById('TOWER_ID');
-    // if(tower) {
-    //     var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-    //         filter: (structure) => structure.hits < structure.hitsMax
-    //     });
-    //     if(closestDamagedStructure) {
-    //         tower.repair(closestDamagedStructure);
-    //     }
+    // TODO: Find towers automatically, or add them to a checked queue on creation.
+    var tower = Game.getObjectById('5a9fce145e0f3b76707d1750');
+    if(tower) {
+        var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (structure) => structure.hits < structure.hitsMax
+        });
+        if(closestDamagedStructure) {
+            tower.repair(closestDamagedStructure);
+        }
 
-    //     var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-    //     if(closestHostile) {
-    //         tower.attack(closestHostile);
-    //     }
-    // }
+        var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+        if(closestHostile) {
+            tower.attack(closestHostile);
+        }
+    }
 
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
